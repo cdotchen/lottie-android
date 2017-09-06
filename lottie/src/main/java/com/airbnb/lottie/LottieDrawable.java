@@ -24,7 +24,6 @@ import com.airbnb.lottie.manager.ImageAssetManager;
 import com.airbnb.lottie.model.layer.CompositionLayer;
 import com.airbnb.lottie.model.layer.Layer;
 import com.airbnb.lottie.utils.LottieValueAnimator;
-import com.airbnb.lottie.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -53,8 +52,6 @@ import java.util.Set;
   private final LottieValueAnimator animator = new LottieValueAnimator();
   private float speed = 1f;
   private float scale = 1f;
-  /** See the comments in {@link #draw(Canvas)}} for more info */
-  private float extraScale = 1f;
 
   private final Set<ColorFilterData> colorFilterData = new HashSet<>();
   private final ArrayList<LazyCompositionTask> lazyCompositionTasks = new ArrayList<>();
@@ -162,7 +159,7 @@ import java.util.Set;
     clearComposition();
     this.composition = composition;
     setSpeed(speed);
-    setScale(clampScale(scale));
+    setScale(scale);
     updateBounds();
     buildCompositionLayer();
     applyColorFilters();
@@ -311,6 +308,14 @@ import java.util.Set;
       return;
     }
 
+    float scale = this.scale;
+    float extraScale = 1f;
+    float maxScale = getMaxScale(canvas);
+    if (scale > maxScale) {
+      scale = maxScale;
+      extraScale = this.scale / scale;
+    }
+
     if (extraScale > 1) {
       // This is a bit tricky...
       // We can't draw on a canvas larger than ViewConfiguration.get(context).getScaledMaximumDrawingCacheSize()
@@ -334,6 +339,7 @@ import java.util.Set;
           -halfCanvasWidth + getScale() * halfWidth,
           -halfCanvasHeight + getScale() * halfHeight);
       canvas.scale(extraScaleSquared, extraScaleSquared, scaledHalfWidth, scaledHalfHeight);
+
     }
 
     matrix.reset();
@@ -513,7 +519,7 @@ import java.util.Set;
    * quality loss.
    */
   public void setScale(float scale) {
-    this.scale = clampScale(scale);
+    this.scale = scale;
     updateBounds();
   }
 
@@ -554,7 +560,7 @@ import java.util.Set;
   }
 
   public float getScale() {
-    return scale * extraScale;
+    return scale;
   }
 
   public LottieComposition getComposition() {
@@ -716,31 +722,31 @@ import java.util.Set;
     return Math.min(maxScaleX, maxScaleY);
   }
 
-  private float clampScale(float newScale) {
-    if (composition == null) {
-      return newScale;
-    }
-    int screenWidth = Utils.getScreenWidth(getContext());
-    int screenHeight = Utils.getScreenHeight(getContext());
-    int compWidth = composition.getBounds().width();
-    int compHeight = composition.getBounds().height();
-    if (compWidth > screenWidth || compHeight > screenHeight) {
-      float xScale = screenWidth / (float) compWidth;
-      float yScale = screenHeight / (float) compHeight;
-
-      float maxScaleForScreen = Math.min(xScale, yScale) - 0.02f;
-      if (newScale > maxScaleForScreen) {
-        extraScale = newScale / maxScaleForScreen;
-        newScale = maxScaleForScreen;
-        Log.w(L.TAG, String.format(
-            "Composition larger than the screen %dx%d vs %dx%d. Scaling down.",
-            compWidth, compHeight, screenWidth, screenHeight));
-      } else {
-        extraScale = 1f;
-      }
-    }
-    return newScale;
-  }
+  // private float clampScale(float newScale) {
+  //   if (composition == null) {
+  //     return newScale;
+  //   }
+  //   int screenWidth = Utils.getScreenWidth(getContext());
+  //   int screenHeight = Utils.getScreenHeight(getContext());
+  //   int compWidth = composition.getBounds().width();
+  //   int compHeight = composition.getBounds().height();
+  //   if (compWidth > screenWidth || compHeight > screenHeight) {
+  //     float xScale = screenWidth / (float) compWidth;
+  //     float yScale = screenHeight / (float) compHeight;
+  //
+  //     float maxScaleForScreen = Math.min(xScale, yScale) - 0.02f;
+  //     if (newScale > maxScaleForScreen) {
+  //       extraScale = newScale / maxScaleForScreen;
+  //       newScale = maxScaleForScreen;
+  //       Log.w(L.TAG, String.format(
+  //           "Composition larger than the screen %dx%d vs %dx%d. Scaling down.",
+  //           compWidth, compHeight, screenWidth, screenHeight));
+  //     } else {
+  //       extraScale = 1f;
+  //     }
+  //   }
+  //   return newScale;
+  // }
 
   private static class ColorFilterData {
 
