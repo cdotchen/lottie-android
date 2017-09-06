@@ -38,7 +38,7 @@
                 android:layout_gravity="center"
                 android:background="@drawable/outline"
                 android:duplicateParentState="true"
-                android:scaleType="centerInside"/>
+                android:scaleType="centerCrop"/>
 
             <LinearLayout
                 android:id="@+id/instructions"

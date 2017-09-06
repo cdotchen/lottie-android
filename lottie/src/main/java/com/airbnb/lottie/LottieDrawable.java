@@ -5,10 +5,8 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -55,6 +53,7 @@ import java.util.Set;
   private final LottieValueAnimator animator = new LottieValueAnimator();
   private float speed = 1f;
   private float scale = 1f;
+  /** See the comments in {@link #draw(Canvas)}} for more info */
   private float extraScale = 1f;
 
   private final Set<ColorFilterData> colorFilterData = new HashSet<>();
@@ -306,64 +305,45 @@ import java.util.Set;
     return PixelFormat.TRANSLUCENT;
   }
 
-  private final Paint testPaint = new Paint() {{
-    setColor(Color.YELLOW);
-    setAlpha(128);
-  }};
-
-
   @Override public void draw(@NonNull Canvas canvas) {
-
-
-
-    canvas.save();
-    int w = composition.getBounds().width();
-    int h = composition.getBounds().height();
-    int sW = (int) (w * scale);
-    int sH = (int) (h * scale);
-    int ssW = (int) (w * getScale());
-    int ssH = (int) (h * getScale());
-    int iW = getIntrinsicWidth();
-    int iH = getIntrinsicHeight();
-    int cW = canvas.getWidth();
-    int cH = canvas.getHeight();
-    float px = w * scale / 2;
-    float py = h * scale / 2;
-
-    px = sW / 2;
-    py = sH / 2;
-    // canvas.translate(cW / 2 - sW / 2, cH / 2 - sH / 2);
-
-    if (extraScale > 1) {
-      float e1 = extraScale - 1f;
-      canvas.translate(-cW / 2 + getScale() * w / 2, -cH / 2 + getScale() * h / 2);
-      // canvas.translate(1600, 1600);
-      canvas.scale(
-          extraScale * extraScale,
-          extraScale * extraScale,
-          px, py);
-    }
-
-
-
     L.beginSection("Drawable#draw");
     if (compositionLayer == null) {
       return;
     }
+
+    if (extraScale > 1) {
+      // This is a bit tricky...
+      // We can't draw on a canvas larger than ViewConfiguration.get(context).getScaledMaximumDrawingCacheSize()
+      // which works out to be roughly the size of the screen because Android can't generate a
+      // bitmap large enough to render to.
+      // As a result, we cap the scale such that it will never be wider/taller than the screen
+      // and then only render in the top left corner of the canvas. We then use extraScale
+      // to scale up the rest of the scale. However, since we rendered the animation to the top
+      // left corner, we need to scale up and translate the canvas to zoom in on the top left
+      // corner.
+      canvas.save();
+      float halfWidth = composition.getBounds().width() / 2f;
+      float halfHeight = composition.getBounds().height() / 2f;
+      float scaledHalfWidth = halfWidth * scale;
+      float scaledHalfHeight = halfHeight * scale;
+      float halfCanvasWidth = canvas.getWidth() / 2;
+      float halfCanvasHeight = canvas.getHeight() / 2;
+      float extraScaleSquared = extraScale * extraScale;
+
+      canvas.translate(
+          -halfCanvasWidth + getScale() * halfWidth,
+          -halfCanvasHeight + getScale() * halfHeight);
+      canvas.scale(extraScaleSquared, extraScaleSquared, scaledHalfWidth, scaledHalfHeight);
+    }
+
     matrix.reset();
     matrix.preScale(scale, scale);
     compositionLayer.draw(canvas, matrix, alpha);
-
-
-
-    canvas.drawCircle(px, py, 8, testPaint);
-    canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), testPaint);
-
-
-
-
     L.endSection("Drawable#draw");
-    canvas.restore();
+
+    if (extraScale > 1) {
+      canvas.restore();
+    }
   }
 
   void systemAnimationsAreDisabled() {
