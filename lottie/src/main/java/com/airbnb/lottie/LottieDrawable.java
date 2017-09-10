@@ -336,8 +336,8 @@ import java.util.Set;
       float extraScaleSquared = extraScale * extraScale;
 
       canvas.translate(
-          -halfCanvasWidth + getScale() * halfWidth,
-          -halfCanvasHeight + getScale() * halfHeight);
+          getScale() * halfWidth - scaledHalfWidth,
+          getScale() * halfHeight - scaledHalfHeight);
       canvas.scale(extraScaleSquared, extraScaleSquared, scaledHalfWidth, scaledHalfHeight);
 
     }
@@ -672,7 +672,7 @@ import java.util.Set;
     return fontAssetManager;
   }
 
-  private @Nullable Context getContext() {
+  @Nullable private Context getContext() {
     Callback callback = getCallback();
     if (callback == null) {
       return null;
